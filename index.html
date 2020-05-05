@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>lichallenge - Create lichess challenges</title>
+    <link rel="icon" href="./lichess-favicon-512.png" />
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        * {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #272727;
+            color: #f6f6f6;
+        }
+        a {
+            color: lightblue;
+            cursor: pointer;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        #url {
+            padding:  0 2em;
+        }
+        div, h2 {
+            text-align: center;
+        }
+        div {
+            font-size: 13pt;
+            margin-bottom: 1em;
+        }
+        #btn {
+            border: none;
+            background: #f6f6f6;
+            padding: 0.6em 0.8em;
+            cursor: pointer;
+            border-radius: 0.4em;
+            border: 1px solid #e4e4e4;
+        }
+        #btn:disabled {
+            color: lightgrey;
+        }
+        select {
+            border: 1px solid #e4e4e4;
+        }
+        input {
+            border: none;
+            width: 40px;
+            font-size: 11pt;
+            padding: 2pt;
+            border-radius: 2pt;
+        }
+        img {
+            width: 16px;
+            height: 16px;
+        }
+        img:hover {
+            border: 1px solid white;
+        }
+    </style>
+</head>
+<body>
+    <h2>Create an open-ended challenge on <a href="https://lichess.org" target="_blank">lichess.org</a></h2>
+    <div>
+        The first two people who connect to the challenge's URL will play against each other.
+    </div>
+    <div>
+        <span>Time: <input type="number" value="5" min="0" max="30" id="limit"/> minutes,</span>
+        <span>Increment: <input type="number" value="3" min="0" max="60" id="inc"/> seconds,</span>
+        <span>
+            Variant:
+            <select id="var">
+                <option value="standard">Standard</option>
+                <option value="chess960">Chess960</option>
+                <option value="crazyhouse">Crazyhouse</option>
+                <option value="antichess">Antichess</option>
+                <option value="atomic">Atomic</option>
+                <option value="horde">Horde</option>
+                <option value="kingOfTheHill">King of the Hill</option>
+                <option value="racingKings">Racing Kings</option>
+                <option value="threeCheck">Three-check</option>
+            </select>
+        </span>
+    </div>
+    <div>
+        <button id="btn" onclick="openChallenge()">Open challenge</button>
+    </div>
+    <div id="response" style="display: none;">
+        <a target="_blank" id="url_white"><span></span><img src="./copy-line.svg" /></button></a>
+        <a target="_blank" id="url"><span></span><img src="./copy-line.svg" /></button></a>
+        <a target="_blank" id="url_black"><span></span><img src="./copy-line.svg" /></button></a>
+    </div>
+    <script type="text/javascript">
+        "use strict"
+
+        const copyToClipboard = str => {
+            const el = document.createElement('textarea');
+            el.value = str;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+        };
+        for (const copyBtn of document.getElementsByTagName("img")) {
+            copyBtn.addEventListener("click", ev => {
+                copyToClipboard(ev.target.parentElement.href)
+                ev.preventDefault()
+                return false
+            })
+        }
+
+        function openChallenge() {
+            if (!document.getElementById("limit").checkValidity() || !document.getElementById("inc").checkValidity()) return
+            document.getElementById("btn").toggleAttribute("disabled", true)
+            setTimeout(() => {
+                document.getElementById("btn").toggleAttribute("disabled", false)
+            }, 1000)
+            let request = new XMLHttpRequest()
+            request.open("POST", `https://lichess.org/api/challenge/open`, true)
+            request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+            request.onload = function() {
+                let r = JSON.parse(request.response)
+                document.getElementById("response").toggleAttribute("style", false)
+                if (r.error) {
+                    document.getElementById("url").innerText = "Error: " + r.error
+                } else if (r.challenge.url) {
+                    document.getElementById("url").href = r.challenge.url
+                    document.getElementById("url").firstChild.innerText = r.challenge.url
+                    document.getElementById("url_white").href = r.urlWhite
+                    document.getElementById("url_white").firstChild.innerText = "White"
+                    document.getElementById("url_black").href = r.urlBlack
+                    document.getElementById("url_black").firstChild.innerText = "Black"
+                } else {
+                    document.getElementById("url").innerText = "An unknown error occured."
+                }
+            }
+            request.send(`clock.limit=${(+document.getElementById("limit").value)*60}&clock.increment=${document.getElementById("inc").value}&variant=${document.getElementById("var").value}`)
+        }
+    </script>
+</body>
+</html>
